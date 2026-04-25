@@ -25,8 +25,8 @@ def init_db():
     try:
         if not session.query(Device).first():
             devices = [
-                Device(name="Futbolkalar", category="cloths"),
-                Device(name="Shimlar", category="cloths"),
+                Device(name="Futbolkalar", category="clothes"),
+                Device(name="Shimlar", category="clothes"),
                 Device(name="Smartfonlar", category="electronics"),
                 Device(name="Noutbuklar", category="electronics"),
                 Device(name="Non mahsulotlari", category="food"),

@@ -12,52 +12,36 @@ lang_kb = ReplyKeyboardMarkup(
 
 
 def main_kb(lang):
-    if lang == "uz":
-        return ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="Mahsulot bo'limi")],
-                [KeyboardButton(text="📞 Bog'lanish")]
-            ],
-            resize_keyboard=True
-        )
-    else:
-        return ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="📦 Device menu")],
-                [KeyboardButton(text="📞 Contact")]
-            ],
-            resize_keyboard=True
-        )
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Mahsulot bo'limi" if lang == "uz" else "📦 Device menu")],
+            [KeyboardButton(text="📞 Bog'lanish" if lang == "uz" else "📞 Contact")]
+        ],
+        resize_keyboard=True
+    )
 
 
 def menu_kb(lang):
-    if lang == "uz":
-        return ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="Kiyimlar")],
-                [KeyboardButton(text="Elektronika")],
-                [KeyboardButton(text="Oziq ovqat")],
-                [KeyboardButton(text="⬅️ Orqaga")]
-            ],
-            resize_keyboard=True
-        )
-    else:
-        return ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="Clothes")],
-                [KeyboardButton(text="Electronics")],
-                [KeyboardButton(text="Food")],
-                [KeyboardButton(text="⬅️ Back")]
-            ],
-            resize_keyboard=True
-        )
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Kiyimlar" if lang == "uz" else "Clothes")],
+            [KeyboardButton(text="Elektronika" if lang == "uz" else "Electronics")],
+            [KeyboardButton(text="Oziq ovqat" if lang == "uz" else "Food")],
+            [KeyboardButton(text="⬅️ Orqaga" if lang == "uz" else "⬅️ Back")]
+        ],
+        resize_keyboard=True
+    )
 
 
 def make_kb(items, back_text):
-    return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=i)] for i in items] + [[KeyboardButton(text=back_text)]],
-        resize_keyboard=True
-    )
+    keyboard = [[KeyboardButton(text=i)] for i in items]
+
+    if not items:
+        keyboard.append([KeyboardButton(text="❌ Bo'sh" if back_text == "⬅️ Orqaga" else "❌ Empty")])
+
+    keyboard.append([KeyboardButton(text=back_text)])
+
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 
 async def start(message: Message):
@@ -66,7 +50,7 @@ async def start(message: Message):
 
 async def handle_message(message: Message):
     user_id = message.from_user.id
-    text = message.text
+    text = message.text.strip()
 
     if text == "🇺🇿 O'zbek":
         user_lang[user_id] = "uz"
@@ -84,68 +68,54 @@ async def handle_message(message: Message):
         await message.answer("Tilni tanlang / Choose language", reply_markup=lang_kb)
         return
 
-    if lang == "uz":
+    categories = {
+        "Kiyimlar": "clothes",
+        "Elektronika": "electronics",
+        "Oziq ovqat": "food",
+        "Clothes": "clothes",
+        "Electronics": "electronics",
+        "Food": "food",
+    }
 
-        if text == "Mahsulot bo'limi":
-            await message.answer("Menyuni tanlang:", reply_markup=menu_kb("uz"))
+    if text in ["Mahsulot bo'limi", "📦 Device menu"]:
+        await message.answer(
+            "Menyuni tanlang:" if lang == "uz" else "Choose category:",
+            reply_markup=menu_kb(lang)
+        )
+        return
 
-        elif text == "📞 Bog'lanish":
-            await message.answer("📱 Aloqa: +998 33 339 3363")
+    if text in ["📞 Bog'lanish", "📞 Contact"]:
+        await message.answer("📱 +998 33 339 3363")
+        return
 
-        elif text == "Kiyimlar":
-            devices = db.get_devices_by_category("cloths")
-            await message.answer("Kiyimlar:", reply_markup=make_kb(devices, "⬅️ Orqaga"))
+    if text in ["⬅️ Orqaga", "⬅️ Back"]:
+        await message.answer(
+            "Asosiy menyu:" if lang == "uz" else "Main menu:",
+            reply_markup=main_kb(lang)
+        )
+        return
 
-        elif text == "Elektronika":
-            devices = db.get_devices_by_category("electronics")
-            await message.answer("Elektronika:", reply_markup=make_kb(devices, "⬅️ Orqaga"))
+    if text in categories:
+        devices = db.get_devices_by_category(categories[text])
 
-        elif text == "Oziq ovqat":
-            devices = db.get_devices_by_category("food")
-            await message.answer("Oziq ovqat:", reply_markup=make_kb(devices, "⬅️ Orqaga"))
-
-        elif text == "⬅️ Orqaga":
-            await message.answer("Asosiy menyu:", reply_markup=main_kb("uz"))
-
-        else:
-            all_devices = (
-                db.get_devices_by_category("cloths") +
-                db.get_devices_by_category("electronics") +
-                db.get_devices_by_category("food")
+        await message.answer(
+            text + ":",
+            reply_markup=make_kb(
+                devices,
+                "⬅️ Orqaga" if lang == "uz" else "⬅️ Back"
             )
+        )
+        return
 
-            if text in all_devices:
-                await message.answer(f"✅ Buyurtma qabul qilindi: {text}")
+  
+    all_devices = (
+        db.get_devices_by_category("clothes") +
+        db.get_devices_by_category("electronics") +
+        db.get_devices_by_category("food")
+    )
 
-    else:
-
-        if text == "📦 Device menu":
-            await message.answer("Choose category:", reply_markup=menu_kb("en"))
-
-        elif text == "📞 Contact":
-            await message.answer("📱 Phone: +998 33 339 3363")
-
-        elif text == "Clothes":
-            devices = db.get_devices_by_category("cloths")
-            await message.answer("Clothes:", reply_markup=make_kb(devices, "⬅️ Back"))
-
-        elif text == "Electronics":
-            devices = db.get_devices_by_category("electronics")
-            await message.answer("Electronics:", reply_markup=make_kb(devices, "⬅️ Back"))
-
-        elif text == "Food":
-            devices = db.get_devices_by_category("food")
-            await message.answer("Food:", reply_markup=make_kb(devices, "⬅️ Back"))
-
-        elif text == "⬅️ Back":
-            await message.answer("Main menu:", reply_markup=main_kb("en"))
-
-        else:
-            all_devices = (
-                db.get_devices_by_category("cloths") +
-                db.get_devices_by_category("electronics") +
-                db.get_devices_by_category("food")
-            )
-
-            if text in all_devices:
-                await message.answer(f"✅ Order confirmed: {text}")
+    if text in all_devices:
+        await message.answer(
+            f"✅ Buyurtma qabul qilindi: {text}" if lang == "uz"
+            else f"✅ Order confirmed: {text}"
+        )
